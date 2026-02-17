@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management | EduPredict</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Role Badges matching reference image */
+        .role-badge {
+            padding: 6px 12px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .role-admin {
+            background: rgba(139, 92, 246, 0.15);
+            color: #8b5cf6;
+        }
+
+        /* Purple */
+        .role-teacher {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10B981;
+        }
+
+        /* Green */
+
+        /* Modal & Form Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--navy-surface);
+            border: var(--glass-border);
+            padding: 32px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--shadow-card);
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            border-color: var(--teal-neon);
+            outline: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        /* --- ADD THESE TO YOUR EXISTING CSS --- */
+:root {
+    /* Add a danger color variable if you don't have it */
+    --danger: #ef4444; 
+    /* Keep your other vars like --primary, --bg-dark, etc. */
+}
+
+/* Professional Delete Button */
+.btn-delete {
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--danger);
+}
+
+/* Specific styles for the Delete Modal to make it look dangerous */
+#deleteModal .modal-content {
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(239,68,68,0.1) inset;
+}
+
+#deleteModal .modal-header h3 {
+    color: var(--danger);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The final confirmation button */
+.btn-confirm-delete {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-right: 58px;
+    margin-top: 15px;
+}
+.btn-confirm-delete:hover {
+    background: #dc2626;
+}
+.btn-cancel {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-secondary);
+    padding: 19px 45px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+}
+.btn-cancel:hover {
+    background: rgb(240, 210, 210);
+}
+
+    </style>
+</head>
+
+<body>
+    <div class="layout-container">
+        <nav class="sidebar" id="main-sidebar">
+        </nav>
+
+        <main style="padding: 40px;">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+                <div>
+                    <h1>User Management</h1>
+                    <p style="color: var(--text-secondary);">Manage system users and access permissions.</p>
+                </div>
+                <button onclick="openModal()" class="btn-primary" style="display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="plus" size="18"></i> Add User
+                </button>
+            </header>
+
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="userModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-title" style="margin-bottom: 24px;">Add New User</h2>
+            <form id="userForm" onsubmit="saveUser(event)">
+                <input type="hidden" id="inp-user-id">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="inp-username" class="form-input" placeholder="e.g. sarah.mitchell" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" id="lbl-password">Password</label>
+                    <input type="password" id="inp-password" class="form-input" placeholder="••••••••">
+                    <small style="color: var(--text-secondary);" id="pwd-hint"></small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select id="inp-role" class="form-select" required>
+                        <option value="TEACHER">TEACHER</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal()"
+                        style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); padding: 10px 20px; border-radius: 8px; cursor: pointer;">Cancel</button>
+                    <button type="button" onclick="submitUserManually()" class="btn-primary">Save User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3>
+                <i data-lucide="alert-triangle"></i>
+                Confirm Deletion
+            </h3>
+            
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-secondary); font-size: 15px; line-height: 1.5;">
+                Are you sure you want to permanently delete this user? 
+                <br><br>
+                <span style="color: #fb7185; font-size: 13px;">
+                    This action is irreversible and the user will lose access immediately.
+                </span>
+            </p>
+        </div>
+        <div class="modal-footer" >
+            
+            <button class="btn-confirm-delete" onclick="confirmDelete()">
+                <i data-lucide="trash-2" size="16" style="margin-right: 8px;"></i>
+                Yes, Delete User
+            </button>
+            <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+    <script src="js/app.js"></script>
+   <script>
+    // --- GLOBAL VARIABLES ---
+    let isEditing = false;
+    let userIdToDelete = null; // Stores the ID pending deletion
+
+    // --- 1. INIT & SECURITY ---
+    async function checkAccess() {
+        if (typeof initSidebar === "function") initSidebar();
+        try {
+            // Assuming app.js has this function. If not, remove this check for testing.
+            const user = await getCurrentUser(); 
+            if (user.role !== 'ADMIN') {
+                window.location.href = '/dashboard.html';
+            } else {
+                loadUsers();
+            }
+        } catch (e) {
+            console.error("Auth check failed or getCurrentUser missing", e);
+            // Fallback for testing if app.js is missing
+            loadUsers(); 
+        }
+    }
+
+    // --- 2. LOAD USERS (Updated with Professional Delete Button) ---
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/users');
+            if (!response.ok) return;
+            const users = await response.json();
+            
+            const tbody = document.getElementById('user-table-body');
+            tbody.innerHTML = '';
+
+            users.forEach(u => {
+                const roleBadgeClass = u.role === 'ADMIN' ? 'role-admin' : 'role-teacher';
+                const roleIcon = u.role === 'ADMIN' ? 'shield' : 'graduation-cap';
+                
+                // Prevent deleting admin. Show nice button otherwise.
+                let deleteAction = '';
+                if (u.username !== 'admin') {
+                    // IMPORTANT: Calls promptDelete(id) instead of deleteUser(id) directly
+                    deleteAction = `
+                        <button onclick="promptDelete(${u.id})" class="btn-delete">
+                            <i data-lucide="trash-2" size="14"></i> Delete
+                        </button>`;
+                } else {
+                     deleteAction = `<span style="color:var(--text-secondary); font-size:11px; margin-left:10px;">Protected</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: 500; color: white;">${u.username}</td>
+                        <td class="metric-mono" style="color: var(--text-secondary);">${u.username}@edu.system</td>
+                        <td>
+                            <span class="role-badge ${roleBadgeClass}">
+                                <i data-lucide="${roleIcon}" size="14"></i> ${u.role}
+                            </span>
+                        </td>
+                        <td><span style="color: #10B981; background: rgba(16, 185, 129, 0.15); padding: 4px 8px; border-radius: 100px; font-size: 11px; font-weight: 700;">Active</span></td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            <button onclick="openEditModal('${u.id}', '${u.username}', '${u.role}')" 
+                                style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap:4px; font-size:12px; font-weight:600;">
+                                <i data-lucide="edit-2" size="14"></i> Edit
+                            </button>
+                            ${deleteAction}
+                        </td>
+                    </tr>
+                `;
+            });
+            // Refresh icons after adding new HTML
+            lucide.createIcons();
+        } catch (error) {
+            console.error("Error loading users:", error);
+        }
+    }
+
+    // --- NEW: DELETE MODAL LOGIC ---
+
+    // Step 1: User clicks table button -> Open Modal
+    function promptDelete(id) {
+        userIdToDelete = id; // Store the ID
+        document.getElementById('deleteModal').style.display = 'flex';
+        lucide.createIcons(); // Ensure modal icons load
+    }
+
+    // Step 2: User cancels
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        userIdToDelete = null; // Clear the ID
+    }
+
+    // Step 3: User clicks "Yes, Delete" in modal -> Perform Fetch
+    async function confirmDelete() {
+        if (!userIdToDelete) return;
+
+        const submitBtn = document.querySelector('.btn-confirm-delete');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = 'Deleting...'; // Show loading state
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch(`/api/users/${userIdToDelete}`, { method: 'DELETE' });
+            if (response.ok) {
+                closeDeleteModal();
+                loadUsers(); // Reload table
+                // Optional: You could replace this alert with a nice toast notification later
+                // alert("User deleted successfully."); 
+            } else {
+                alert("Failed to delete user.");
+            }
+        } catch (error) {
+            console.error("Delete error:", error);
+            alert("Network error during deletion.");
+        } finally {
+             // Reset button state
+             submitBtn.innerHTML = originalText;
+             submitBtn.disabled = false;
+        }
+    }
+
+
+    // --- KEEP EXISTING ADD/EDIT MODAL FUNCTIONS ---
+    function openModal() {
+        isEditing = false;
+        document.getElementById('modal-title').textContent = "Add New User";
+        document.getElementById('userForm').reset();
+        document.getElementById('inp-user-id').value = '';
+        document.getElementById('inp-password').required = true;
+        document.getElementById('pwd-hint').textContent = "";
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function openEditModal(id, username, role) {
+        isEditing = true;
+        document.getElementById('modal-title').textContent = "Edit User Role";
+        document.getElementById('inp-user-id').value = id;
+        document.getElementById('inp-username').value = username;
+        document.getElementById('inp-role').value = role;
+        document.getElementById('inp-password').required = false;
+        document.getElementById('pwd-hint').textContent = "(Leave blank to keep password)";
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('userModal').style.display = 'none';
+    }
+
+    // --- KEEP EXISTING SUBMIT FUNCTION ---
+    async function submitUserManually() {
+        const id = document.getElementById('inp-user-id').value;
+        const username = document.getElementById('inp-username').value.trim();
+        const role = document.getElementById('inp-role').value;
+        const password = document.getElementById('inp-password').value;
+
+        if (!username) { alert("Username required."); return; }
+        if (!isEditing && !password) { alert("Password required for new users."); return; }
+
+        const userData = {
+            username: username, role: role,
+            password: password ? password.trim() : null
+        };
+        const url = isEditing ? `/api/users/${id}` : '/api/users';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            });
+            if (response.ok) {
+                closeModal();
+                loadUsers();
+            } else {
+                alert("Error: " + await response.text());
+            }
+        } catch (error) {
+            alert("Failed to connect to server.");
+        }
+    }
+
+    // Start
+    checkAccess();
+</script>
+</body>
+
+</html>

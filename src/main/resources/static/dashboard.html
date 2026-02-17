@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduPredict | Command Center</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 48px;
+        }
+
+        /* Custom pulsing dot for High Risk */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        /* =========================================
+   AI CHAT WIDGET STYLES
+========================================= */
+        #ai-chat-widget {
+            position: fixed;
+            bottom: 90px;
+            /* Sits just above your robot button */
+            right: 30px;
+            width: 320px;
+            height: 420px;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 217, 192, 0.2);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            overflow: hidden;
+        }
+
+        /* Toggles for showing/hiding */
+        .chat-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(20px);
+        }
+
+        .chat-visible {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        /* Chat Layout Areas */
+        .chat-header {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Chat Bubbles */
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .ai-message {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .user-message {
+            background: #00D9C0;
+            color: #0f172a;
+            font-weight: 500;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* Input Area */
+        .chat-input-area {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input-area input {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            outline: none;
+            font-size: 13px;
+        }
+
+        .chat-input-area input:focus {
+            border-color: #00D9C0;
+        }
+
+        .chat-input-area button {
+            background: #00D9C0;
+            color: #0f172a;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .chat-input-area button:hover {
+            background: #00bfa9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout-container">
+        <nav class="sidebar" id="main-sidebar"></nav>
+
+        <main>
+            <header class="page-header">
+                <div>
+                    <h1 style="font-size: 32px; margin-bottom: 8px;">Performance Overview</h1>
+                    <p style="color: var(--text-secondary);">Real-time academic surveillance & prediction.</p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button onclick="triggerBulkPrediction(event)" class="btn-primary" style="background: rgba(0, 217, 192, 0.1); color: var(--teal-neon); border: 1px solid var(--teal-neon);">
+                        <i data-lucide="cpu" style="vertical-align: middle; margin-right: 8px;" size="18"></i>
+                        Predict All
+                    </button>
+                    
+                    <button onclick="window.location.href='/api/students/report/csv'" class="btn-primary">
+                        <i data-lucide="download" style="vertical-align: middle; margin-right: 8px;" size="18"></i>
+                        Export Report
+                    </button>
+                </div>
+            </header>
+
+            <div class="stat-grid">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h3 style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Avg
+                                GPA</h3>
+                            <p id="avg-gpa" class="metric-mono"
+                                style="font-size: 42px; color: var(--text-primary); margin-top: 8px;">--</p>
+                        </div>
+                        <div
+                            style="background: rgba(0, 217, 192, 0.1); padding: 8px; border-radius: 8px; color: var(--teal-neon);">
+                            <i data-lucide="trending-up"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h3 style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">
+                                Critical Risk</h3>
+                            <p id="risk-count" class="metric-mono"
+                                style="font-size: 42px; color: var(--risk-high); margin-top: 8px; text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);">
+                                --</p>
+                        </div>
+                        <div
+                            style="background: rgba(239, 68, 68, 0.1); padding: 8px; border-radius: 8px; color: var(--risk-high);">
+                            <i data-lucide="alert-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h3 style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Active
+                                Students</h3>
+                            <p id="total-count" class="metric-mono"
+                                style="font-size: 42px; color: var(--text-primary); margin-top: 8px;">--</p>
+                        </div>
+                        <div
+                            style="background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 8px; color: var(--text-secondary);">
+                            <i data-lucide="users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="card">
+                    <h3 style="margin-bottom: 24px;">GPA Distribution</h3>
+                    <div style="height: 250px; width: 100%;">
+                        <canvas id="gpaChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom: 24px;">Risk Analysis</h3>
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 24px;">Live Student Records</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Student Name</th>
+                            <th>Current GPA</th>
+                            <th>Attendance</th>
+                            <th>Risk Status</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div class="chat-fab" onclick="toggleChat()"
+        style="position: fixed; bottom: 30px; right: 30px; background: #00D9C0; padding: 16px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 12px rgba(0,217,192,0.3); z-index: 1001;">
+        <i data-lucide="bot" style="color: #0F172A; width: 28px; height: 28px;"></i>
+    </div>
+
+    <div id="ai-chat-widget" class="chat-hidden">
+        <div class="chat-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="bot" color="#00D9C0"></i>
+                <div>
+                    <h3 style="margin: 0; font-size: 14px; color: white;">EduPredict AI</h3>
+                    <span style="font-size: 10px; color: #10B981;">● Online</span>
+                </div>
+            </div>
+            <button onclick="toggleChat()" aria-label="Close chat" title="Close chat"
+                style="background: none; border: none; color: #94a3b8; cursor: pointer;">
+                <i data-lucide="x" size="18"></i>
+            </button>
+        </div>
+
+        <div id="chat-messages" class="chat-messages">
+            <div class="message ai-message">
+                Hello! I am the EduPredict AI. Ask me to analyze the dashboard, or type <b>"risk"</b> or
+                <b>"attendance"</b> for a quick summary.
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Ask something..." onkeydown="handleChatEnter(event)">
+            <button type="button" onclick="sendChatMessage()" aria-label="Send message" title="Send message">
+                <i data-lucide="send" size="16"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Initialize Sidebar
+        if (typeof initSidebar === "function") initSidebar();
+
+        // --- CHART DEFAULTS (Dark Mode) ---
+        Chart.defaults.color = '#94A3B8';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        // ==========================================
+        // DASHBOARD LOGIC (Charts & Tables)
+        // ==========================================
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/students?page=0&size=100');
+                const data = await response.json();
+                const students = data.content;
+                const totalCount = data.totalElements;
+
+                updateKPIs(students, totalCount);
+                renderTable(students);
+                renderCharts(students);
+            } catch (error) {
+                console.error("Dashboard Load Error:", error);
+            }
+        }
+
+        function updateKPIs(students, totalCount) {
+            const totalGpa = students.reduce((sum, s) => sum + s.currentGpa, 0);
+            const avg = students.length ? (totalGpa / students.length).toFixed(2) : "0.00";
+            document.getElementById('avg-gpa').textContent = avg;
+
+            const highRisk = students.filter(s => s.riskLevel === 'HIGH').length;
+            document.getElementById('risk-count').textContent = highRisk;
+            document.getElementById('total-count').textContent = totalCount;
+        }
+
+        function renderTable(students) {
+            const tbody = document.getElementById('student-table-body');
+            tbody.innerHTML = '';
+            const top5 = students.slice(0, 5);
+
+            top5.forEach(s => {
+                const riskColor = s.riskLevel === 'HIGH' ? '#EF4444' : s.riskLevel === 'MEDIUM' ? '#F59E0B' : '#10B981';
+                const riskLabel = s.riskLevel ? s.riskLevel : 'PENDING';
+                const riskBadgeColor = s.riskLevel ? riskColor : '#94A3B8';
+
+                const row = `
+                    <tr>
+                        <td class="metric-mono" style="color: var(--text-secondary);">${s.studentId}</td>
+                        <td style="font-weight: 500; color: white;">${s.firstName} ${s.lastName}</td>
+                        <td class="metric-mono">${s.currentGpa}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 60px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;">
+                                    <div style="width: ${s.attendancePercentage}%; height: 100%; background: var(--teal-neon); border-radius: 2px;"></div>
+                                </div>
+                                <span class="metric-mono" style="font-size: 12px;">${s.attendancePercentage}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="risk-badge" style="color: ${riskBadgeColor}; background: ${riskBadgeColor}15; padding: 4px 8px; border-radius: 4px;">
+                                ${riskLabel}
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                                <button onclick="window.location.href='/student-detail.html?id=${s.id}'" 
+                                    style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                    View
+                                </button>
+                                <button onclick="triggerPrediction(${s.id})" 
+                                    style="background: rgba(0, 217, 192, 0.1); border: 1px solid rgba(0, 217, 192, 0.2); color: var(--teal-neon); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                    AI Predict
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function renderCharts(students) {
+            const riskCounts = { LOW: 0, MEDIUM: 0, HIGH: 0, PENDING: 0 };
+            students.forEach(s => {
+                const level = s.riskLevel || 'PENDING';
+                if (riskCounts[level] !== undefined) riskCounts[level]++;
+            });
+
+            const riskCanvas = document.getElementById('riskChart');
+            if (window.riskChartInstance) window.riskChartInstance.destroy();
+            window.riskChartInstance = new Chart(riskCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low', 'Medium', 'High'],
+                    datasets: [{
+                        data: [riskCounts.LOW, riskCounts.MEDIUM, riskCounts.HIGH],
+                        backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: { cutout: '75%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, color: '#94A3B8' } } } }
+            });
+
+            const chartData = students.slice(0, 10);
+            const gpaCanvas = document.getElementById('gpaChart');
+            if (window.gpaChartInstance) window.gpaChartInstance.destroy();
+            window.gpaChartInstance = new Chart(gpaCanvas, {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(s => s.firstName),
+                    datasets: [{
+                        label: 'GPA',
+                        data: chartData.map(s => s.currentGpa),
+                        backgroundColor: '#00D9C0',
+                        borderRadius: 4,
+                        barThickness: 20
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { display: true, color: 'rgba(255,255,255,0.05)' }, beginAtZero: true, max: 10.0 },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        async function triggerPrediction(id) {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = "...";
+            await fetch(`/api/students/${id}/predict`, { method: 'POST' });
+            btn.textContent = originalText;
+            loadDashboard();
+        }
+
+        async function triggerBulkPrediction(event) {
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            
+            // Show a loading state
+            btn.innerHTML = `<i data-lucide="loader-2" class="spin" style="vertical-align: middle; margin-right: 8px;" size="18"></i> Processing...`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            try {
+                // Call the new Java Bulk endpoint
+                await fetch(`/api/students/predict-all`, { method: 'POST' });
+                // Reload the dashboard to show all the new predictions!
+                await loadDashboard();
+            } catch (error) {
+                console.error("Bulk prediction failed:", error);
+            } finally {
+                // Reset button
+                btn.innerHTML = originalText;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        }
+
+        // ==========================================
+        // AI CHATBOT LOGIC
+        // ==========================================
+        function toggleChat() {
+            const chatWidget = document.getElementById('ai-chat-widget');
+            if (chatWidget.classList.contains('chat-hidden')) {
+                chatWidget.classList.remove('chat-hidden');
+                chatWidget.classList.add('chat-visible');
+                document.getElementById('chat-input').focus();
+            } else {
+                chatWidget.classList.remove('chat-visible');
+                chatWidget.classList.add('chat-hidden');
+            }
+        }
+
+        function handleChatEnter(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        async function sendChatMessage() {
+            const inputField = document.getElementById('chat-input');
+            const messageText = inputField.value.trim();
+
+            if (!messageText) return;
+
+            const chatMessages = document.getElementById('chat-messages');
+
+            const userMsgHtml = `<div class="message user-message">${messageText}</div>`;
+            chatMessages.insertAdjacentHTML('beforeend', userMsgHtml);
+            inputField.value = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const typingId = "typing-" + Date.now();
+            chatMessages.insertAdjacentHTML('beforeend', `<div id="${typingId}" class="message ai-message" style="opacity: 0.7;">Thinking...</div>`);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageText })
+                });
+
+                const data = await response.json();
+                document.getElementById(typingId).remove();
+                chatMessages.insertAdjacentHTML('beforeend', `<div class="message ai-message">${data.response}</div>`);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            } catch (error) {
+                console.error("Backend Error:", error);
+                document.getElementById(typingId).remove();
+                chatMessages.insertAdjacentHTML('beforeend', `<div class="message ai-message" style="color: #EF4444;">Connection failed. Is your Java server running?</div>`);
+            }
+        }
+
+        
+
+        // Run on startup
+        loadDashboard();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    </script>
+</body>
+
+</html>

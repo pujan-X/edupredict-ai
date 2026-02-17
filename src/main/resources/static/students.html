@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management | EduPredict</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Modal (Popup) Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(4px);
+            display: none;
+            /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--navy-surface);
+            border: var(--glass-border);
+            padding: 32px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--shadow-card);
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-input:focus {
+            border-color: var(--teal-neon);
+            outline: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout-container">
+        <nav class="sidebar" id="main-sidebar"></nav>
+
+        <main style="padding: 40px;">
+            <header class="page-header">
+                <div>
+                    <h1>Student Directory</h1>
+                    <p style="color: var(--text-secondary);">Manage student records and academic data.</p>
+                </div>
+                <button onclick="openModal()" class="btn-primary">
+                    <i data-lucide="plus" size="18"></i> Add Student
+                </button>
+            </header>
+
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>GPA</th>
+                            <th>Attendance</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-table-body">
+                    </tbody>
+                </table>
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 20px;">
+                    <span id="page-info" style="color: var(--text-secondary); font-size: 14px;">Page 1</span>
+
+                    <div style="display: flex; gap: 12px;">
+                        <button id="btn-prev" onclick="changePage(-1)" disabled
+                            style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer;">
+                            Previous
+                        </button>
+                        <button id="btn-next" onclick="changePage(1)"
+                            style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer;">
+                            Next
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="addStudentModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 24px;">Add New Student</h2>
+            <form id="addStudentForm" onsubmit="saveStudent(event)">
+                <div class="form-group">
+                    <label class="form-label">Student ID</label>
+                    <input type="text" id="inp-id" class="form-input" placeholder="e.g. STD-2024-005" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        <input type="text" id="inp-fname" class="form-input" placeholder="John" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" id="inp-lname" class="form-input" placeholder="Doe" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Current GPA / CGPA</label>
+                        <input type="number" id="inp-gpa" class="form-input" min="0" max="10.0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attendance (%)</label>
+                        <input type="number" id="inp-att" class="form-input" min="0" max="100" required>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal()" class="btn-cancel">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div
+                style="background: rgba(239, 68, 68, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: #EF4444;">
+                <i data-lucide="alert-triangle" size="32"></i>
+            </div>
+            <h2 style="margin-bottom: 12px;">Delete Student?</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 32px; line-height: 1.5;">
+                Are you sure you want to delete <strong id="del-name-display" style="color: white;"></strong>?
+                This action cannot be undone.
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <button onclick="closeDeleteModal()"
+                    style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    Cancel
+                </button>
+                <button onclick="confirmDelete()"
+                    style="background: #EF4444; border: none; color: white; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
+                    Yes, Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        lucide.createIcons();
+
+        let currentPage = 0;
+        const pageSize = 10;
+        let totalPages = 0;
+
+
+        // --- 1. LOAD DATA (Now with Pagination) ---
+        async function loadStudents() {
+            // Fetch: /api/students?page=0&size=10
+            const response = await fetch(`/api/students?page=${currentPage}&size=${pageSize}`);
+            const data = await response.json();
+
+            const students = data.content; // 'content' holds the list in a Page object
+            totalPages = data.totalPages;
+
+            // Render Table (Same as before)
+            const tbody = document.getElementById('student-table-body');
+            tbody.innerHTML = '';
+
+            if (students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; color: var(--text-secondary);">No students found.</td></tr>';
+            }
+
+            students.forEach(s => {
+                // ... (Keep your existing row generation code here) ...
+                // Just copy-paste the "tr" block from your previous code
+                const riskColor = s.riskLevel === 'HIGH' ? '#EF4444' : s.riskLevel === 'MEDIUM' ? '#F59E0B' : '#10B981';
+                const riskBadge = s.riskLevel
+                    ? `<span class="risk-badge" style="color: ${riskColor}; background: ${riskColor}15;">${s.riskLevel}</span>`
+                    : `<span class="risk-badge" style="color: var(--text-secondary); background: rgba(255,255,255,0.1);">PENDING</span>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="metric-mono" style="color: var(--text-secondary);">${s.studentId}</td>
+                        <td style="font-weight: 500; color: white;">${s.firstName} ${s.lastName}</td>
+                        <td class="metric-mono">${s.currentGpa}</td>
+                        <td class="metric-mono">${s.attendancePercentage}%</td>
+                        <td>${riskBadge}</td>
+                        <td style="text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
+                             <button onclick="window.location.href='/student-detail.html?id=${s.id}'" 
+                                style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); padding: 6px 12px; border-radius: 6px; cursor: pointer;">View</button>
+                             <button onclick="deleteStudent(${s.id}, '${s.firstName}')" 
+                                style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #EF4444; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
+                                <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                             </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Update Buttons
+            document.getElementById('page-info').textContent = `Page ${currentPage + 1} of ${totalPages}`;
+            document.getElementById('btn-prev').disabled = (currentPage === 0);
+            document.getElementById('btn-next').disabled = (currentPage >= totalPages - 1);
+
+            lucide.createIcons();
+        }
+
+        // --- CHANGE PAGE FUNCTION ---
+        function changePage(direction) {
+            currentPage += direction;
+            loadStudents();
+        }
+
+        // --- 2. MODAL FUNCTIONS ---
+        function openModal() {
+            document.getElementById('addStudentModal').style.display = 'flex';
+        }
+        function closeModal() {
+            document.getElementById('addStudentModal').style.display = 'none';
+        }
+
+        // --- 3. SAVE DATA ---
+        async function saveStudent(e) {
+            e.preventDefault(); // Stop page reload
+
+            const newStudent = {
+                studentId: document.getElementById('inp-id').value,
+                firstName: document.getElementById('inp-fname').value,
+                lastName: document.getElementById('inp-lname').value,
+                currentGpa: parseFloat(document.getElementById('inp-gpa').value),
+                attendancePercentage: parseInt(document.getElementById('inp-att').value),
+                riskLevel: null // Let the system or prediction decide later
+            };
+
+            try {
+                const response = await fetch('/api/students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newStudent)
+                });
+
+                if (response.ok) {
+                    closeModal();
+                    document.getElementById('addStudentForm').reset();
+                    loadStudents(); // Refresh table
+                } else {
+                    alert("Error saving student. Check if ID is duplicate.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+        // --- 4. DELETE FUNCTION ---
+        let studentToDeleteId = null; // Variable to store the ID temporarily
+
+        // 1. Triggered when you click the Trash Icon
+        function deleteStudent(id, name) {
+            studentToDeleteId = id; // Remember who we are deleting
+            document.getElementById('del-name-display').textContent = name; // Update text
+            document.getElementById('deleteModal').style.display = 'flex'; // Show modal
+            lucide.createIcons(); // Ensure icon renders
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+            studentToDeleteId = null;
+        }
+
+        // 2. Triggered when you click "Yes, Delete" in the modal
+        async function confirmDelete() {
+            if (!studentToDeleteId) return;
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = "Deleting..."; // Feedback
+
+            try {
+                const response = await fetch(`/api/students/${studentToDeleteId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    closeDeleteModal();
+                    loadStudents(); // Refresh table
+                } else {
+                    alert("Error: Could not delete student.");
+                }
+            } catch (error) {
+                console.error("Delete Error:", error);
+            } finally {
+                btn.textContent = originalText;
+            }
+        }
+
+        loadStudents();
+        initSidebar();
+        loadDashboard();
+    </script>
+</body>
+
+</html>

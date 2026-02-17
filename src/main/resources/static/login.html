@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduPredict | Login</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            background-color: #0F172A; /* Fallback color */
+        }
+
+        /* --- THE ANIMATION CANVAS --- */
+        #vanta-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0; /* Behind everything */
+        }
+
+        /* --- LOGIN CARD --- */
+        .login-card {
+            position: relative;
+            z-index: 10; /* Above animation */
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 48px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .brand {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            color: #94A3B8;
+            margin-bottom: 6px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .btn-login {
+            width: 100%;
+            background: #00D9C0;
+            color: #0F172A;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="vanta-canvas"></div>
+
+    <div class="login-card">
+        <div class="brand">
+            <i data-lucide="bar-chart-2"></i> EduPredict
+        </div>
+        <p style="color:#94A3B8; margin-bottom:24px; font-size:14px;">Academic Intelligence Portal</p>
+
+       <form action="/login" method="post">
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" name="username" class="input-field" placeholder="admin" required>
+            </div>
+
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" name="password" class="input-field" placeholder="••••" required>
+            </div>
+
+            <button type="submit" class="btn-login">Sign In</button>
+            
+            <div th:if="${param.error}" style="color: #ef4444; margin-top: 10px;">
+                Invalid Username or Password
+            </div>
+        </form>
+        <p id="error-msg" style="color:#ef4444; font-size:13px; margin-top:10px; display:none;">Invalid Credentials</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.net.min.js"></script>
+    
+    <script>
+        lucide.createIcons();
+
+        // --- ANIMATION START ---
+        VANTA.NET({
+            el: "#vanta-canvas",
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.00,
+            scaleMobile: 1.00,
+            color: 0x00d9c0,
+            backgroundColor: 0x0f172a,
+            points: 10.00,
+            maxDistance: 22.00,
+            spacing: 16.00
+        });
+
+        // --- SECURE LOGIN LOGIC ---
+        function attemptLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            // Hardcoded Credentials for Demo
+            if (email === "admin" && pass === "1234") {
+                // Success!
+                document.querySelector('.btn-login').innerText = "Unlocking...";
+                document.querySelector('.btn-login').style.background = "#22c55e";
+                
+                setTimeout(() => {
+                    // Redirect to the Dashboard
+                    window.location.href = "dashboard.html";
+                }, 1000);
+            } else {
+                // Fail
+                errorMsg.style.display = "block";
+                document.getElementById('password').value = "";
+            }
+        }
+    </script>
+</body>
+</html>

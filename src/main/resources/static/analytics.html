@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Analytics | EduPredict</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .stat-card-mini {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mini-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: rgba(0, 217, 192, 0.1);
+            color: var(--teal-neon);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout-container">
+        <nav class="sidebar" id="main-sidebar"></nav>
+
+        <main style="padding: 40px;">
+            <header style="margin-bottom: 32px;">
+                <h1>Deep Analytics</h1>
+                <p style="color: var(--text-secondary);">Correlation analysis & cohort modeling.</p>
+            </header>
+
+            <div class="analytics-grid">
+                <div class="card full-width">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <h3>Attendance Impact on Performance</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <span
+                                style="font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                                <span
+                                    style="width: 8px; height: 8px; background: var(--teal-neon); border-radius: 50%;"></span>
+                                Low Risk
+                            </span>
+                            <span
+                                style="font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                                <span
+                                    style="width: 8px; height: 8px; background: var(--risk-high); border-radius: 50%;"></span>
+                                High Risk
+                            </span>
+                        </div>
+                    </div>
+                    <div style="height: 350px;">
+                        <canvas id="scatterChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analytics-grid">
+                <div class="card">
+                    <h3>Subject Proficiency (Aggregate)</h3>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;">Class-wide strengths
+                        & weaknesses</p>
+                    <div style="height: 300px;">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Cohort Progression</h3>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;">Sem 1 vs Current Sem
+                    </p>
+                    <div style="height: 300px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+
+                    <div style="margin-top: 20px; display: grid; gap: 12px;">
+                        <div class="stat-card-mini">
+                            <div class="mini-icon"><i data-lucide="trending-up" size="18"></i></div>
+                            <div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Growth Rate</div>
+                                <div class="metric-mono" style="color: var(--teal-neon);">+12.5%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        lucide.createIcons();
+        Chart.defaults.color = '#94A3B8';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        async function loadAnalytics() {
+            try {
+                // FIX 1: Fetch a larger batch (e.g., 100) so the Scatter Plot looks populated and cool.
+                // We also extract 'content' because the API returns a Page Object now.
+                const response = await fetch('/api/students?page=0&size=100');
+                const data = await response.json();
+
+                // FIX 2: Extract the list from the Page Object
+                const students = data.content;
+
+                // Now render the charts with the valid list
+                renderScatter(students);
+                renderRadar(); // Simulated data (doesn't need student list)
+                renderTrend(students);
+            } catch (error) {
+                console.error("Analytics Load Error:", error);
+            }
+        }
+
+        function renderScatter(students) {
+            const ctx = document.getElementById('scatterChart');
+
+            // Map students to X/Y coordinates
+            const dataPoints = students.map(s => ({
+                x: s.attendancePercentage,
+                y: s.currentGpa,
+                studentName: s.firstName + " " + s.lastName,
+                risk: s.riskLevel
+            }));
+
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Student Correlation',
+                        data: dataPoints,
+                        backgroundColor: (ctx) => {
+                            const val = ctx.raw?.risk;
+                            return val === 'HIGH' ? '#EF4444' : val === 'MEDIUM' ? '#F59E0B' : '#00D9C0';
+                        },
+                        pointRadius: 6,
+                        pointHoverRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'GPA (10.0)' }, // Change title to 10.0
+                            min: 0,   // Change from 1.0 to 0
+                            max: 10   // Change from 4.0 or 4.2 to 10
+                        },
+                        x: {
+                            title: { display: true, text: 'Attendance (%)' },
+                            min: 0,   // Change from 50 to 0 so you can see the low attendance students!
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.raw.studentName}: ${ctx.raw.y} GPA / ${ctx.raw.x}% Att`
+                            }
+                        },
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function renderRadar() {
+            // Simulated Data (Since we don't have subjects in DB yet)
+            new Chart(document.getElementById('radarChart'), {
+                type: 'radar',
+                data: {
+                    labels: ['Mathematics', 'Computer Sci', 'Physics', 'Literature', 'Logic'],
+                    datasets: [{
+                        label: 'Class Average',
+                        data: [3.8, 3.2, 2.9, 3.5, 3.9],
+                        backgroundColor: 'rgba(0, 217, 192, 0.2)',
+                        borderColor: '#00D9C0',
+                        pointBackgroundColor: '#00D9C0'
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255,255,255,0.1)' },
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            pointLabels: { color: 'white', font: { size: 12 } },
+                            suggestedMin: 0, suggestedMax: 4
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTrend(students) {
+            // We'll calculate the current average, and simulate past averages for the trend line
+            const currentAvg = students.reduce((sum, s) => sum + s.currentGpa, 0) / students.length;
+
+            new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan (Current)'],
+                    datasets: [{
+                        label: 'Avg Class GPA',
+                        // Simulating a slight upward trend ending in the real current Average
+                        data: [currentAvg - 0.3, currentAvg - 0.2, currentAvg - 0.25, currentAvg - 0.1, currentAvg],
+                        borderColor: '#F59E0B',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        loadAnalytics();
+        initSidebar();
+        loadDashboard();
+    </script>
+</body>
+
+</html>

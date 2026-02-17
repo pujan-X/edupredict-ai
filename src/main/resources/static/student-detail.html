@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Details | EduPredict</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Specific layout tweaks for Profile */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-bottom: 24px;
+            font-weight: 500;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .back-btn:hover { color: var(--teal-neon); }
+        
+        .profile-header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout-container">
+        <nav class="sidebar">
+            <div class="logo-text">EduPredict<span style="color:var(--teal-neon)">.</span></div>
+            
+            <div class="nav-item" onclick="window.location.href='/dashboard.html'">
+                <i data-lucide="layout-dashboard" size="20"></i> Dashboard
+            </div>
+            <div class="nav-item active">
+                <i data-lucide="users" size="20"></i> Students
+            </div>
+            
+            <div class="nav-item" style="margin-top: auto; color: var(--risk-high);" onclick="window.location.href='/logout'">
+                 <i data-lucide="log-out" size="20"></i> Logout
+            </div>
+        </nav>
+
+        <main style="padding: 40px;">
+            <button onclick="window.location.href='/dashboard.html'" class="back-btn">
+                <i data-lucide="arrow-left" size="16"></i> Back to Dashboard
+            </button>
+
+            <div class="card" style="margin-bottom: 32px;">
+                <div class="profile-header-content">
+                    <div>
+                        <h1 id="s-name" style="margin-bottom: 8px;">Loading...</h1>
+                        <p id="s-id" class="metric-mono" style="color: var(--text-secondary);">...</p>
+                    </div>
+                    <div id="risk-badge-container">
+                        </div>
+                </div>
+            </div>
+
+            <div class="stat-grid">
+                <div class="card">
+                    <h3 style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Current GPA</h3>
+                    <p id="s-gpa" class="metric-mono" style="font-size: 32px; color: var(--text-primary); margin-top: 10px;">--</p>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Attendance</h3>
+                    <p id="s-attendance" class="metric-mono" style="font-size: 32px; color: var(--text-primary); margin-top: 10px;">--</p>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Predicted Grade</h3>
+                    <p id="s-predicted" class="metric-mono" style="font-size: 32px; color: var(--teal-neon); margin-top: 10px;">--</p>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Confidence</h3>
+                    <p id="s-confidence" class="metric-mono" style="font-size: 32px; color: var(--text-secondary); margin-top: 10px;">--</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 24px;">Performance History</h3>
+                <div style="height: 300px; width: 100%;">
+                    <canvas id="historyChart"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        // --- CHART DEFAULTS FOR DARK MODE ---
+        Chart.defaults.color = '#94A3B8';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('id');
+
+        async function loadStudent() {
+            if (!studentId) return;
+
+            const response = await fetch(`/api/students/${studentId}`);
+            const student = await response.json();
+
+            // Fill Data
+            document.getElementById('s-name').textContent = student.firstName + ' ' + student.lastName;
+            document.getElementById('s-id').textContent = student.studentId;
+            document.getElementById('s-gpa').textContent = student.currentGpa;
+            document.getElementById('s-attendance').textContent = student.attendancePercentage + '%';
+            
+            document.getElementById('s-predicted').textContent = student.predictedGrade ? student.predictedGrade.toFixed(2) : "N/A";
+            document.getElementById('s-confidence').textContent = student.predictionConfidence ? (student.predictionConfidence * 100).toFixed(0) + '%' : "N/A";
+
+            // Risk Badge Logic
+            const riskColor = getRiskColor(student.riskLevel);
+            document.getElementById('risk-badge-container').innerHTML = `
+                <span class="risk-badge" style="background: ${riskColor.bg}; color: ${riskColor.text}; font-size: 14px; padding: 8px 16px;">
+                    ${student.riskLevel} RISK
+                </span>
+            `;
+
+            renderHistoryChart(student);
+        }
+
+        function getRiskColor(level) {
+            // Using Aura Colors
+            if(level === 'HIGH') return { bg: 'rgba(239, 68, 68, 0.15)', text: '#EF4444' };
+            if(level === 'MEDIUM') return { bg: 'rgba(245, 158, 11, 0.15)', text: '#F59E0B' };
+            return { bg: 'rgba(16, 185, 129, 0.15)', text: '#10B981' };
+        }
+
+        function renderHistoryChart(student) {
+            const ctx = document.getElementById('historyChart');
+            
+            // Create Gradient Fill
+            const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(0, 217, 192, 0.2)');
+            gradient.addColorStop(1, 'rgba(0, 217, 192, 0)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Current'],
+                    datasets: [{
+                        label: 'GPA Trend',
+                        data: [3.0, 3.2, 3.1, student.currentGpa], 
+                        borderColor: '#00D9C0',
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#1A2332',
+                        pointBorderColor: '#00D9C0',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: false, min: 2.0, max: 4.0 }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        loadStudent();
+    </script>
+</body>
+</html>
