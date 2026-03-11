@@ -27,18 +27,15 @@ public class ReportService {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            // Add Title
             Font fontHeader = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20);
             Paragraph title = new Paragraph("EduPredict - Student Performance Report", fontHeader);
             title.setAlignment(Element.ALIGN_CENTER);
             document.add(title);
             document.add(Chunk.NEWLINE);
 
-            // Create Table
-            PdfPTable table = new PdfPTable(5); // 5 columns
+            PdfPTable table = new PdfPTable(5);
             table.setWidthPercentage(100);
             
-            // Add Headers
             String[] headers = {"ID", "Name", "GPA", "Attendance", "Risk Level"};
             for (String header : headers) {
                 PdfPCell cell = new PdfPCell(new Phrase(header));
@@ -47,7 +44,6 @@ public class ReportService {
                 table.addCell(cell);
             }
 
-            // Add Data
             List<Student> students = repository.findAll();
             for (Student student : students) {
                 table.addCell(student.getStudentId());
