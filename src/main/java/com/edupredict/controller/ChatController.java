@@ -20,23 +20,18 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*")
 public class ChatController {
 
-    // 🔴 PASTE YOUR API KEY HERE
-    // Create a dynamic URL builder that hides your key
+ 
     private String getGeminiUrl() {
-        // 1. Try to get the key from the server's hidden environment variables
         String apiKey = System.getenv("GEMINI_API_KEY");
 
-        // 2. Fallback for your local computer while testing
         if (apiKey == null || apiKey.isEmpty()) {
-            // It is okay to put your key here TEMPORARILY for local testing,
-            // but make sure to delete it before pushing to GitHub!
+            
             apiKey = "AIzaSyDRImHVJR_vWU_oL3Up--XeZ_wi0Q0AQPs";
         }
 
         return "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="  + apiKey;
     }
 
-    // ✅ THIS IS THE MISSING PIECE THAT CAUSED THE ERROR
     @Autowired
     private StudentRepository studentRepository;
 
@@ -57,30 +52,22 @@ public class ChatController {
         return response;
     }
 
-    // 1. Add this import at the top of the file if it's missing:
-    // import java.util.List;
 
     private String callGeminiAI(String text) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
 
-        // --- 1. FETCH DATA (The "Bulletproof" Loop Version) ---
         String studentData = "No student data available.";
 
-        // Check if we have students
         if (studentRepository.count() > 0) {
-            // Get the list of students
             java.util.List<Student> allStudents = studentRepository.findAll();
 
-            // Build the string manually
             StringBuilder sb = new StringBuilder();
             int count = 0;
 
             for (Student s : allStudents) {
-                // INCREASED LIMIT TO 100 SO IT SEES NEW STUDENTS
                 if (count >= 100)
                     break;
 
-                // Append student info safely
                 sb.append(String.format("[%s: GPA=%.1f, Risk=%s], ",
                         s.getName(),
                         s.getCurrentGpa(),
@@ -91,12 +78,10 @@ public class ChatController {
             studentData = sb.toString();
         }
 
-        // --- 2. CREATE INTELLIGENT PROMPT ---
         String systemContext = "You are EduBot. Use this student database to answer: " + studentData
                 + ". Keep it short.";
         String fullPrompt = systemContext + "\nUser: " + text;
 
-        // --- 3. SEND TO GOOGLE (Standard Logic) ---
         Map<String, Object> part = Map.of("text", fullPrompt);
         Map<String, Object> content = Map.of("parts", new Object[] { part });
         Map<String, Object> requestBody = Map.of("contents", new Object[] { content });
@@ -113,7 +98,6 @@ public class ChatController {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         JsonNode rootNode = mapper.readTree(response.body());
 
-        // Error Handling
         if (rootNode.has("error")) {
             return "API Error: " + rootNode.get("error").get("message").asText();
         }
