@@ -15,15 +15,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // 1. AUTHORIZATION RULES
             .authorizeHttpRequests(auth -> auth
-                // Allow everyone to see these specific files:
                 .requestMatchers("/login.html", "/css/**", "/js/**", "/images/**", "/").permitAll()
-                // Everything else (like /dashboard) requires a password:
                 .anyRequest().authenticated()
             )
             
-            // 2. CUSTOM LOGIN FORM CONFIG
             .formLogin(form -> form
                 .loginPage("/login.html")
                 .loginProcessingUrl("/login")
@@ -31,20 +27,17 @@ public class SecurityConfig {
                 .permitAll()
             )
             
-            // 3. LOGOUT CONFIG
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login.html")
                 .permitAll()
             )
             
-            // 4. DISABLE CSRF (For development simplicity)
             .csrf(csrf -> csrf.disable());
 
         return http.build();
     }
 
-    // ✅ THIS IS THE MISSING PIECE!
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
