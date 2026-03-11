@@ -19,8 +19,7 @@ public class DatabaseLoader {
         return args -> {
             System.out.println("🚀 SECURING ADMIN ACCOUNT...");
 
-            // --- 1. ADMIN USER SETUP ---
-            // FIX 1: Added .orElse(null) to handle the Optional
+           
             User admin = userRepository.findByUsername("admin").orElse(null);
             if (admin == null) {
                 admin = new User();
