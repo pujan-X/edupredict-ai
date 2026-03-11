@@ -15,7 +15,7 @@ public class User {
     private String username;
 
     @Column(nullable = false)
-    private String password; // This will be encrypted
+    private String password; 
 
-    private String role; // e.g., "ADMIN", "TEACHER"
+    private String role; 
 }
